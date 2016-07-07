@@ -161,9 +161,9 @@ var WSLiveVideo = function (_Rect) {
       if (!after.hasOwnProperty('url')) return;
 
       var self = this;
-      var diff = after.url == before.url;
+      var isChanged = after.url != before.url;
 
-      if (diff) {
+      if (isChanged) {
         self.reconnect();
       }
     }
