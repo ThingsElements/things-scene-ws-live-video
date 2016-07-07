@@ -117,6 +117,10 @@ export default class WSLiveVideo extends Rect {
 
   play() {
     this._isPlaying = true;
+    if(!this._player || !this._player.client){
+      return
+    }
+
     if(this._player.client.readyState === WebSocket.CLOSED) {
       this.reconnect();
     }
@@ -129,9 +133,24 @@ export default class WSLiveVideo extends Rect {
 
   reconnect() {
     if(this._player) {
+      this._player = null
       this._player.stop();
+    } else {
+      this._player = null
     }
-    this._player = null
+  }
+
+  onchange(after, before) {
+    if(!after.hasOwnProperty('url'))
+      return
+
+    var self = this
+    var diff = after.url == before.url
+
+
+    if(diff) {
+      self.reconnect()
+    }
   }
 
   onclick(e) {

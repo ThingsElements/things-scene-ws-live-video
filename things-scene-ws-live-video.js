@@ -131,6 +131,10 @@ var WSLiveVideo = function (_Rect) {
     key: "play",
     value: function play() {
       this._isPlaying = true;
+      if (!this._player || !this._player.client) {
+        return;
+      }
+
       if (this._player.client.readyState === WebSocket.CLOSED) {
         this.reconnect();
       }
@@ -145,9 +149,23 @@ var WSLiveVideo = function (_Rect) {
     key: "reconnect",
     value: function reconnect() {
       if (this._player) {
+        this._player = null;
         this._player.stop();
+      } else {
+        this._player = null;
       }
-      this._player = null;
+    }
+  }, {
+    key: "onchange",
+    value: function onchange(after, before) {
+      if (!after.hasOwnProperty('url')) return;
+
+      var self = this;
+      var diff = after.url == before.url;
+
+      if (diff) {
+        self.reconnect();
+      }
     }
   }, {
     key: "onclick",
