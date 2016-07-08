@@ -37,6 +37,11 @@ export default class WSLiveVideo extends Rect {
 
     } else {
       // this.drawComponentFrame(ctx)
+      var { left, top, width, height } = this.model
+
+      ctx.beginPath()
+      ctx.rect(left, top, width, height)
+      this.drawFill(ctx)
       this.drawSymbol(ctx)
       this.drawPlayButton(ctx)
 

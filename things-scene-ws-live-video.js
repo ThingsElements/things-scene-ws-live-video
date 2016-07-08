@@ -69,6 +69,16 @@ var WSLiveVideo = function (_Rect) {
         // this.drawComponentFrame(ctx)
       } else {
         // this.drawComponentFrame(ctx)
+        var _model = this.model;
+        var left = _model.left;
+        var top = _model.top;
+        var width = _model.width;
+        var height = _model.height;
+
+
+        ctx.beginPath();
+        ctx.rect(left, top, width, height);
+        this.drawFill(ctx);
         this.drawSymbol(ctx);
         this.drawPlayButton(ctx);
       }
@@ -208,4 +218,4 @@ exports.default = WSLiveVideo;
 
 Component.register('ws-live-video', WSLiveVideo);
 
-},{}]},{},[1,2]);
+},{}]},{},[1]);
