@@ -48,18 +48,25 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <things-scene-handler type="text-editor"></things-scene-handler>
         <things-scene-handler type="move-handler"></things-scene-handler>
       </things-scene-viewer>
+      <input id="urlChange" type="button" value="URL 변경">
 
     </template>
     <script>
       window.addEventListener('WebComponentsReady', function(e) {
         var app = document.querySelector('#app')
 
+        app.$.urlChange.addEventListener('click', function(e) {
+          app.model.components[1].url = './office-ambient.mpg'
+        })
+
+        var url = './office-ambient1.mpg'
+
         app.model = {
           width: 500,
           height: 500,
           components: [{
             type: 'ws-live-video',
-            top: 100,
+            top: 0,
             left: 100,
             width: 320,
             height: 240,
@@ -67,7 +74,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             strokeStyle: '#552555',
             fontColor: '#FF0000',
             lineWidth: 5,
+            isLive: true,
             url : 'ws://192.168.35.205:8084/'
+          }, {
+            type: 'ws-live-video',
+            top: 240,
+            left: 100,
+            width: 320,
+            height: 240,
+            fillStyle: '#ffffff',
+            strokeStyle: '#552555',
+            fontColor: '#FF0000',
+            lineWidth: 5,
+            isLive: false,
+            url : url
           }]
         }
       });
