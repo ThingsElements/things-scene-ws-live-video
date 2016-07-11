@@ -204,6 +204,9 @@ var WSLiveVideo = function (_Rect) {
     value: function onmouseleave(e) {
       this._isHover = false;
     }
+  }, {
+    key: "controls",
+    get: function get() {}
   }]);
 
   return WSLiveVideo;
