@@ -1,5 +1,16 @@
 var { Component, Rect } = scene
 
+function roundSet(round, width, height){
+  var max = width > height ? (height / width) * 100 : 100
+
+  if(round >= max)
+    round = max
+  else if(round <= 0)
+    round = 0
+
+  return round
+}
+
 export default class WSLiveVideo extends Rect {
 
   _draw(ctx) {
@@ -16,7 +27,17 @@ export default class WSLiveVideo extends Rect {
 
     }
 
+    var { left, top, width, height, round } = this.model
+
+
     if(this._isPlaying){
+      ctx.save();
+
+      round = roundSet(round, width, height)
+      if (round > 0) {
+        this.drawRoundedImage(ctx)
+      } 
+
       ctx.drawImage(
         this._player.canvas,
         0,
@@ -33,21 +54,33 @@ export default class WSLiveVideo extends Rect {
         this.drawStopButton(ctx)
       }
 
+      ctx.restore();
     } else {
-      var { left, top, width, height } = this.model
-
-      ctx.beginPath()
-      ctx.rect(left, top, width, height)
-      this.drawFill(ctx)
+      super._draw(ctx);
       this.drawPlayButton(ctx)
-
     }
-
-    this.drawComponentFrame(ctx)
 
   }
 
-  get controls() {}
+  drawRoundedImage(ctx) {
+    var {left, top, width, height, round} = this.model
+
+    var tmpRound = (round / 100) * (width / 2)
+    ctx.beginPath()
+
+    ctx.moveTo(left + tmpRound, top);
+    ctx.lineTo(left + width - tmpRound, top);
+    ctx.quadraticCurveTo(left + width, top, left + width, top + tmpRound);
+    ctx.lineTo(left + width, top + height - tmpRound);
+    ctx.quadraticCurveTo(left + width, top + height, left + width - tmpRound, top + height);
+    ctx.lineTo(left + tmpRound, top + height);
+    ctx.quadraticCurveTo(left, top + height, left, top + height - tmpRound);
+    ctx.lineTo(left, top + tmpRound);
+    ctx.quadraticCurveTo(left, top, left + tmpRound, top);
+    ctx.closePath()
+
+    ctx.clip()
+  }
 
   drawSymbol(ctx) {
     var image = new Image();

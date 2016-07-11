@@ -25,6 +25,8 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -34,6 +36,15 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var _scene = scene;
 var Component = _scene.Component;
 var Rect = _scene.Rect;
+
+
+function roundSet(round, width, height) {
+  var max = width > height ? height / width * 100 : 100;
+
+  if (round >= max) round = max;else if (round <= 0) round = 0;
+
+  return round;
+}
 
 var WSLiveVideo = function (_Rect) {
   _inherits(WSLiveVideo, _Rect);
@@ -59,27 +70,60 @@ var WSLiveVideo = function (_Rect) {
         });
       }
 
+      var _model = this.model;
+      var left = _model.left;
+      var top = _model.top;
+      var width = _model.width;
+      var height = _model.height;
+      var round = _model.round;
+
+
       if (this._isPlaying) {
+        ctx.save();
+
+        round = roundSet(round, width, height);
+        if (round > 0) {
+          this.drawRoundedImage(ctx);
+        }
+
         ctx.drawImage(this._player.canvas, 0, 0, this._player.width, this._player.height, this.model.left, this.model.top, this.model.width, this.model.height);
 
         if (this._isHover) {
           this.drawStopButton(ctx);
         }
+
+        ctx.restore();
       } else {
-        var _model = this.model;
-        var left = _model.left;
-        var top = _model.top;
-        var width = _model.width;
-        var height = _model.height;
-
-
-        ctx.beginPath();
-        ctx.rect(left, top, width, height);
-        this.drawFill(ctx);
+        _get(Object.getPrototypeOf(WSLiveVideo.prototype), "_draw", this).call(this, ctx);
         this.drawPlayButton(ctx);
       }
+    }
+  }, {
+    key: "drawRoundedImage",
+    value: function drawRoundedImage(ctx) {
+      var _model2 = this.model;
+      var left = _model2.left;
+      var top = _model2.top;
+      var width = _model2.width;
+      var height = _model2.height;
+      var round = _model2.round;
 
-      this.drawComponentFrame(ctx);
+
+      var tmpRound = round / 100 * (width / 2);
+      ctx.beginPath();
+
+      ctx.moveTo(left + tmpRound, top);
+      ctx.lineTo(left + width - tmpRound, top);
+      ctx.quadraticCurveTo(left + width, top, left + width, top + tmpRound);
+      ctx.lineTo(left + width, top + height - tmpRound);
+      ctx.quadraticCurveTo(left + width, top + height, left + width - tmpRound, top + height);
+      ctx.lineTo(left + tmpRound, top + height);
+      ctx.quadraticCurveTo(left, top + height, left, top + height - tmpRound);
+      ctx.lineTo(left, top + tmpRound);
+      ctx.quadraticCurveTo(left, top, left + tmpRound, top);
+      ctx.closePath();
+
+      ctx.clip();
     }
   }, {
     key: "drawSymbol",
@@ -204,9 +248,6 @@ var WSLiveVideo = function (_Rect) {
     value: function onmouseleave(e) {
       this._isHover = false;
     }
-  }, {
-    key: "controls",
-    get: function get() {}
   }]);
 
   return WSLiveVideo;
