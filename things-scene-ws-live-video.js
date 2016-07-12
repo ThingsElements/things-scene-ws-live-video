@@ -62,6 +62,7 @@ var WSLiveVideo = function (_Rect) {
       this._ctx = ctx;
 
       if (!this._player) {
+        this._isPlaying = false;
 
         var client;
 
@@ -245,13 +246,22 @@ var WSLiveVideo = function (_Rect) {
   }, {
     key: "onchange",
     value: function onchange(after, before) {
-      if (!after.hasOwnProperty('url')) return;
-
       var self = this;
-      var isChanged = after.url != before.url;
 
-      if (isChanged) {
-        self.reconnect();
+      if (after.hasOwnProperty('url')) {
+        var isChanged = after.url != before.url;
+
+        if (isChanged) {
+          self.reconnect();
+        }
+      }
+
+      if (after.hasOwnProperty('autoplay')) {
+        var isChanged = after.autoplay != before.autoplay;
+
+        if (isChanged) {
+          self.reconnect();
+        }
       }
     }
   }, {

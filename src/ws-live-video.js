@@ -18,6 +18,7 @@ export default class WSLiveVideo extends Rect {
     this._ctx = ctx
 
     if(!this._player) {
+      this._isPlaying = false;
 
       var client
 
@@ -212,16 +213,24 @@ export default class WSLiveVideo extends Rect {
   }
 
   onchange(after, before) {
-    if(!after.hasOwnProperty('url'))
-      return
-
     var self = this
-    var isChanged = after.url != before.url
 
+    if(after.hasOwnProperty('url')) {
+      var isChanged = after.url != before.url
 
-    if(isChanged) {
-      self.reconnect()
+      if(isChanged) {
+        self.reconnect()
+      }
     }
+
+    if(after.hasOwnProperty('autoplay')) {
+      var isChanged = after.autoplay != before.autoplay
+
+      if(isChanged) {
+        self.reconnect();
+      }
+    }
+    
   }
 
   onclick(e) {
