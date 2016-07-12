@@ -74,10 +74,14 @@ var WSLiveVideo = function (_Rect) {
         }
 
         this._player = new jsmpeg(client, {
-          autoplay: false,
+          autoplay: this.model.autoplay || false,
           onload: this.onLoaded.bind(this),
           ondecodeframe: this.drawDecoded.bind(this)
         });
+
+        if (this.model.autoplay) {
+          this._isPlaying = true;
+        }
       }
 
       var _model = this.model;
@@ -291,4 +295,4 @@ exports.default = WSLiveVideo;
 
 Component.register('ws-live-video', WSLiveVideo);
 
-},{}]},{},[1,2]);
+},{}]},{},[1]);

@@ -30,10 +30,14 @@ export default class WSLiveVideo extends Rect {
       }
 
       this._player = new jsmpeg(client, {
-        autoplay: false,
+        autoplay: this.model.autoplay || false,
         onload: this.onLoaded.bind(this),
         ondecodeframe: this.drawDecoded.bind(this)
       })
+
+      if(this.model.autoplay) {
+        this._isPlaying = true;
+      }
 
     }
 
