@@ -10,7 +10,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Shaders for accelerated WebGL YCbCrToRGBA conversion
-var SHADER_FRAGMENT_YCBCRTORGBA = '\n  precision mediump float;\n\n  uniform sampler2D YTexture1;\n  uniform sampler2D CBTexture1;\n  uniform sampler2D CRTexture1;\n\n  uniform sampler2D YTexture2;\n  uniform sampler2D CBTexture2;\n  uniform sampler2D CRTexture2;\n\n  uniform sampler2D YTexture3;\n  uniform sampler2D CBTexture3;\n  uniform sampler2D CRTexture3;\n\n  uniform sampler2D YTexture4;\n  uniform sampler2D CBTexture4;\n  uniform sampler2D CRTexture4;\n\n  varying vec2 texCoord;\n\n  vec4 fragcolor(sampler2D Y, sampler2D Cr, sampler2D Cb, vec2 uv) {\n    float rotate_x = -0.0;\n    float rotate_y = -0.0;\n\n    float zoom = 1.0;\n\n    /* zoom이 클수록 실질적으로 원본 이미지 상의 거리는 가까와지므로 zoom으로 나눔. */\n    vec2 xy = vec2(uv.x - 0.5, uv.y - 0.5) / zoom;\n    xy = vec2(xy.x - rotate_y, xy.y - rotate_x);\n\n    /* 원점으로부터의 거리를 구함 */\n    float r = sqrt(xy.x * xy.x + xy.y * xy.y);\n    float rr = r * r;\n\n    float k1 = 0.50;\n    float k2 = 0.70;\n    float k3 = 0.01;\n\n    xy = xy / (1.0 + k1 * r + k2 * rr + k3 * rr * rr);\n\n    /* 최종 가져올 포지션을 결정되면, 원점의 위치를 재조정함 */\n    xy = vec2(xy.x + 0.5, xy.y + 0.5);\n\n    float y = texture2D(Y, xy).r;\n    float cr = texture2D(Cr, xy).r - 0.5;\n    float cb = texture2D(Cb, xy).r - 0.5;\n\n    return vec4(\n      y + 1.4 * cr,\n      y + -0.343 * cb - 0.711 * cr,\n      y + 1.765 * cb,\n      1.0\n    );\n  }\n\n  void main() {\n\n    vec2 uv;\n    vec4 color;\n\n    if(texCoord.x < 0.5) {\n      if(texCoord.y < 0.5) {\n        /* 화면의 상하를 바꾸기 위해서 y값을 1.0에서 빼줌. */\n        uv = vec2(texCoord.x * 2.0, 1.0 - texCoord.y * 2.0);\n        color = fragcolor(YTexture1, CRTexture1, CBTexture1, uv);\n      } else {\n        uv = vec2(texCoord.x * 2.0, 1.0 - (texCoord.y * 2.0 - 1.0));\n        color = fragcolor(YTexture2, CRTexture2, CBTexture2, uv);\n      }\n    } else {\n      if(texCoord.y < 0.5) {\n        uv = vec2(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0);\n        color = fragcolor(YTexture3, CRTexture3, CBTexture3, uv);\n      } else {\n        uv = vec2(texCoord.x * 2.0 - 1.0, 1.0 - (texCoord.y * 2.0 - 1.0));\n        color = fragcolor(YTexture4, CRTexture4, CBTexture4, uv);\n      }\n    }\n\n    gl_FragColor = color;\n  }\n';
+var SHADER_FRAGMENT_YCBCRTORGBA = '\n  precision mediump float;\n\n  uniform sampler2D YTexture1;\n  uniform sampler2D CBTexture1;\n  uniform sampler2D CRTexture1;\n\n  uniform sampler2D YTexture2;\n  uniform sampler2D CBTexture2;\n  uniform sampler2D CRTexture2;\n\n  uniform sampler2D YTexture3;\n  uniform sampler2D CBTexture3;\n  uniform sampler2D CRTexture3;\n\n  uniform sampler2D YTexture4;\n  uniform sampler2D CBTexture4;\n  uniform sampler2D CRTexture4;\n\n  uniform vec3 control;\n\n  varying vec2 texCoord;\n\n  vec4 fragcolor(sampler2D Y, sampler2D Cr, sampler2D Cb, vec2 uv) {\n    float zoom = control.x;\n    float rotate_x = control.y;\n    float rotate_y = control.z;\n\n    /* zoom이 클수록 실질적으로 원본 이미지 상의 거리는 가까와지므로 zoom으로 나눔. */\n    vec2 xy = vec2(uv.x - 0.5, uv.y - 0.5) / zoom;\n    xy = vec2(xy.x - rotate_y, xy.y - rotate_x);\n\n    /* 원점으로부터의 거리를 구함 */\n    float r = sqrt(xy.x * xy.x + xy.y * xy.y);\n    float rr = r * r;\n\n    float k1 = 0.50;\n    float k2 = 0.70;\n    float k3 = 0.01;\n\n    xy = xy / (1.0 + k1 * r + k2 * rr + k3 * rr * rr);\n\n    /* 최종 가져올 포지션을 결정되면, 원점의 위치를 재조정함 */\n    xy = vec2(xy.x + 0.5, xy.y + 0.5);\n\n    float y = texture2D(Y, xy).r;\n    float cr = texture2D(Cr, xy).r - 0.5;\n    float cb = texture2D(Cb, xy).r - 0.5;\n\n    return vec4(\n      y + 1.4 * cr,\n      y + -0.343 * cb - 0.711 * cr,\n      y + 1.765 * cb,\n      1.0\n    );\n  }\n\n  void main() {\n\n    vec2 uv;\n    vec4 color;\n\n    if(texCoord.x < 0.5) {\n      if(texCoord.y < 0.5) {\n        /* 화면의 상하를 바꾸기 위해서 y값을 1.0에서 빼줌. */\n        uv = vec2(texCoord.x * 2.0, 1.0 - texCoord.y * 2.0);\n        color = fragcolor(YTexture1, CRTexture1, CBTexture1, uv);\n      } else {\n        uv = vec2(texCoord.x * 2.0, 1.0 - (texCoord.y * 2.0 - 1.0));\n        color = fragcolor(YTexture2, CRTexture2, CBTexture2, uv);\n      }\n    } else {\n      if(texCoord.y < 0.5) {\n        uv = vec2(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0);\n        color = fragcolor(YTexture3, CRTexture3, CBTexture3, uv);\n      } else {\n        uv = vec2(texCoord.x * 2.0 - 1.0, 1.0 - (texCoord.y * 2.0 - 1.0));\n        color = fragcolor(YTexture4, CRTexture4, CBTexture4, uv);\n      }\n    }\n\n    gl_FragColor = color;\n  }\n';
 
 var SHADER_VERTEX_IDENTITY = '\n  attribute vec2 vertex;\n  varying vec2 texCoord;\n\n  void main() {\n    texCoord = vertex;\n    gl_Position = vec4((vertex * 2.0 - 1.0) * vec2(1, -1), 0.0, 1.0);\n  }\n';
 
@@ -29,6 +29,10 @@ var GLDriver = function () {
 
     this.canvas.width = this.width;
     this.canvas.height = this.height;
+
+    this._rotate_x = 0;
+    this._rotate_y = 0;
+    this._fov = 1.0;
 
     this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
     if (!this.gl) throw new Error('WebGL not supported');
@@ -139,6 +143,8 @@ var GLDriver = function () {
       gl.bindTexture(gl.TEXTURE_2D, this.CBTexture4);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.halfWidth / 2, this.height / 4, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uint8Cb4);
 
+      gl.uniform3f(this.controlLoc, this.fov, this.rotateX, this.rotateY);
+
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
   }, {
@@ -184,9 +190,35 @@ var GLDriver = function () {
       gl.enableVertexAttribArray(vertexAttr);
       gl.vertexAttribPointer(vertexAttr, 2, gl.FLOAT, false, 0, 0);
 
+      this.controlLoc = gl.getUniformLocation(this.program, 'control');
+
       gl.viewport(0, 0, this.width, this.height);
 
       return true;
+    }
+  }, {
+    key: 'fov',
+    get: function get() {
+      return this._fov;
+    },
+    set: function set(fov) {
+      this._fov = fov;
+    }
+  }, {
+    key: 'rotateX',
+    get: function get() {
+      return this._rotate_x;
+    },
+    set: function set(rotate_x) {
+      this._rotate_x = rotate_x;
+    }
+  }, {
+    key: 'rotateY',
+    get: function get() {
+      return this._rotate_y;
+    },
+    set: function set(rotate_y) {
+      this._rotate_y = rotate_y;
     }
   }]);
 
@@ -2116,6 +2148,12 @@ var Rect = _scene.Rect;
 var WIDTH = 1280;
 var HEIGHT = 960;
 
+var FOV_MIN = 0.05;
+var FOV_MAX = 5.0;
+
+var ROTATE_MIN = -2.0;
+var ROTATE_MAX = +2.0;
+
 function roundSet(round, width, height) {
   var max = width > height ? height / width * 100 : 100;
 
@@ -2386,6 +2424,56 @@ var WS4ChVideo = function (_Rect) {
     key: 'onmouseleave',
     value: function onmouseleave(e) {
       this._isHover = false;
+    }
+  }, {
+    key: 'onwheel',
+    value: function onwheel(e) {
+
+      var wheelSpeed = 0.01;
+
+      var fov = this._gl_driver.fov - e.deltaY * wheelSpeed;
+
+      if (fov < FOV_MIN) {
+        fov = FOV_MIN;
+      } else if (fov > FOV_MAX) {
+        fov = FOV_MAX;
+      }
+
+      this._gl_driver.fov = fov;
+
+      e.stopPropagation();
+    }
+  }, {
+    key: 'ondragstart',
+    value: function ondragstart(e) {
+      this._dragStart = {
+        x: e.offsetX,
+        y: e.offsetY,
+        rx: this._gl_driver.rotateX,
+        ry: this._gl_driver.rotateY
+      };
+
+      e.stopPropagation();
+    }
+  }, {
+    key: 'ondragmove',
+    value: function ondragmove(e) {
+
+      if (!this._isPlaying) return;
+
+      var zoom = this._gl_driver.fov;
+      var rx = this._dragStart.rx - (e.offsetY - this._dragStart.y) / 500 / zoom;
+      var ry = this._dragStart.ry + (e.offsetX - this._dragStart.x) / 500 / zoom;
+
+      this._gl_driver.rotateX = Math.min(ROTATE_MAX, Math.max(ROTATE_MIN, rx));
+      this._gl_driver.rotateY = Math.min(ROTATE_MAX, Math.max(ROTATE_MIN, ry));
+
+      e.stopPropagation();
+    }
+  }, {
+    key: 'ondragend',
+    value: function ondragend(e) {
+      e.stopPropagation();
     }
   }]);
 

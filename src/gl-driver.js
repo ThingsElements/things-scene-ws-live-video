@@ -18,13 +18,14 @@ const SHADER_FRAGMENT_YCBCRTORGBA = `
   uniform sampler2D CBTexture4;
   uniform sampler2D CRTexture4;
 
+  uniform vec3 control;
+
   varying vec2 texCoord;
 
   vec4 fragcolor(sampler2D Y, sampler2D Cr, sampler2D Cb, vec2 uv) {
-    float rotate_x = -0.0;
-    float rotate_y = -0.0;
-
-    float zoom = 1.0;
+    float zoom = control.x;
+    float rotate_x = control.y;
+    float rotate_y = control.z;
 
     /* zoom이 클수록 실질적으로 원본 이미지 상의 거리는 가까와지므로 zoom으로 나눔. */
     vec2 xy = vec2(uv.x - 0.5, uv.y - 0.5) / zoom;
@@ -107,6 +108,10 @@ export default class GLDriver {
     this.canvas.width = this.width;
     this.canvas.height = this.height;
 
+    this._rotate_x = 0
+    this._rotate_y = 0
+    this._fov = 1.0
+
     this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl')
     if(!this.gl)
       throw new Error('WebGL not supported')
@@ -117,6 +122,30 @@ export default class GLDriver {
   dispose() {
     this.canvas = null
     this.gl = null
+  }
+
+  get fov() {
+    return this._fov
+  }
+
+  set fov(fov) {
+    this._fov = fov
+  }
+
+  get rotateX() {
+    return this._rotate_x
+  }
+
+  set rotateX(rotate_x) {
+    this._rotate_x = rotate_x
+  }
+
+  get rotateY() {
+    return this._rotate_y
+  }
+
+  set rotateY(rotate_y) {
+    this._rotate_y = rotate_y
   }
 
   createTexture(index, name) {
@@ -213,6 +242,8 @@ export default class GLDriver {
     gl.bindTexture(gl.TEXTURE_2D, this.CBTexture4);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.halfWidth/2, this.height/4, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uint8Cb4);
 
+    gl.uniform3f(this.controlLoc, this.fov, this.rotateX, this.rotateY);
+
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -256,6 +287,8 @@ export default class GLDriver {
     var vertexAttr = gl.getAttribLocation(this.program, 'vertex');
     gl.enableVertexAttribArray(vertexAttr);
     gl.vertexAttribPointer(vertexAttr, 2, gl.FLOAT, false, 0, 0);
+
+    this.controlLoc = gl.getUniformLocation(this.program, 'control');
 
     gl.viewport(0, 0, this.width, this.height);
 

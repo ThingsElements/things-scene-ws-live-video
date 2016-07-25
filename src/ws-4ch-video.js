@@ -6,6 +6,12 @@ var { Component, Rect } = scene
 const WIDTH = 1280
 const HEIGHT = 960
 
+const FOV_MIN = 0.05;
+const FOV_MAX = 5.0;
+
+const ROTATE_MIN = -2.0;
+const ROTATE_MAX = +2.0;
+
 function roundSet(round, width, height){
   var max = width > height ? (height / width) * 100 : 100
 
@@ -289,8 +295,6 @@ export default class WS4ChVideo extends Rect {
     } else {
       this.play();
     }
-
-
   }
 
   onmouseenter(e) {
@@ -301,6 +305,52 @@ export default class WS4ChVideo extends Rect {
     this._isHover = false;
   }
 
+  onwheel(e) {
+
+    var wheelSpeed = 0.01;
+
+    var fov = this._gl_driver.fov - e.deltaY * wheelSpeed
+
+    if(fov < FOV_MIN) {
+        fov = FOV_MIN;
+    } else if(fov > FOV_MAX) {
+        fov = FOV_MAX;
+    }
+
+    this._gl_driver.fov = fov
+
+    e.stopPropagation();
+  }
+
+  ondragstart(e) {
+    this._dragStart = {
+      x : e.offsetX,
+      y : e.offsetY,
+      rx : this._gl_driver.rotateX,
+      ry : this._gl_driver.rotateY
+    }
+
+    e.stopPropagation()
+  }
+
+  ondragmove(e) {
+
+    if(!this._isPlaying)
+      return
+
+    var zoom = this._gl_driver.fov
+    var rx = this._dragStart.rx - (e.offsetY - this._dragStart.y) / 500 / zoom
+    var ry = this._dragStart.ry + (e.offsetX - this._dragStart.x) / 500 / zoom
+
+    this._gl_driver.rotateX = Math.min(ROTATE_MAX, Math.max(ROTATE_MIN, rx))
+    this._gl_driver.rotateY = Math.min(ROTATE_MAX, Math.max(ROTATE_MIN, ry))
+
+    e.stopPropagation()
+  }
+
+  ondragend(e) {
+    e.stopPropagation()
+  }
 }
 
 Component.register('ws-4ch-video', WS4ChVideo)
