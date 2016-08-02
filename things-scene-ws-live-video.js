@@ -2774,4 +2774,4 @@ exports.default = WSLiveVideo;
 
 Component.register('ws-live-video', WSLiveVideo);
 
-},{}]},{},[1,2,3,4,5,6,7]);
+},{}]},{},[2]);
