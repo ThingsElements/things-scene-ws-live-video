@@ -27,7 +27,7 @@ export default class WSLiveVideo extends Rect {
         client = new WebSocket( this.model.url )
       } else {
         this.isLive = false;
-        client = this.model.url
+        client = this.app.url(this.model.url)
       }
 
       this._player = new jsmpeg(client, {
@@ -51,7 +51,7 @@ export default class WSLiveVideo extends Rect {
       round = roundSet(round, width, height)
       if (round > 0) {
         this.drawRoundedImage(ctx)
-      } 
+      }
 
       ctx.drawImage(
         this._player.canvas,
@@ -209,7 +209,7 @@ export default class WSLiveVideo extends Rect {
     if(this._player) {
       this._player.stop();
     }
-    this._player = null 
+    this._player = null
   }
 
   onchange(after, before) {
@@ -230,7 +230,7 @@ export default class WSLiveVideo extends Rect {
         self.reconnect();
       }
     }
-    
+
   }
 
   onclick(e) {

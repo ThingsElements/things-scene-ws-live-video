@@ -2540,7 +2540,7 @@ var WSLiveVideo = function (_Rect) {
           client = new WebSocket(this.model.url);
         } else {
           this.isLive = false;
-          client = this.model.url;
+          client = this.app.url(this.model.url);
         }
 
         this._player = new jsmpeg(client, {
