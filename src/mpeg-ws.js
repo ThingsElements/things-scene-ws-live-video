@@ -33,7 +33,7 @@ export default class MpegWs {
     opts = opts || {};
     // this.progressive = (opts.progressive !== false);
     // this.benchmark = !!opts.benchmark;
-    // this.canvas = opts.canvas || document.createElement('canvas');
+    this.canvas = opts.canvas || document.createElement('canvas');
     // this.autoplay = !!opts.autoplay;
     // this.wantsToPlay = this.autoplay;
     // this.loop = !!opts.loop;

@@ -1,3 +1,6 @@
+import MpegFile from './mpeg-file'
+import MpegWs from './mpeg-ws'
+
 var { Component, Rect } = scene
 
 function roundSet(round, width, height){
@@ -20,21 +23,22 @@ export default class WSLiveVideo extends Rect {
     if(!this._player) {
       this._isPlaying = false;
 
-      var client
-
       if(this.model.url && this.model.url.match(/^ws[s]?:\/\//)) {
         this.isLive = true;
-        client = new WebSocket( this.model.url )
+
+        this._player = new MpegWs(this.model.url, {
+          ondecodeframe: this.drawDecoded.bind(this)
+        })
       } else {
         this.isLive = false;
-        client = this.app.url(this.model.url)
-      }
+        var url = this.app.url ? this.app.url(this.model.url) : this.model.url
 
-      this._player = new jsmpeg(client, {
-        autoplay: this.model.autoplay || false,
-        onload: this.onLoaded.bind(this),
-        ondecodeframe: this.drawDecoded.bind(this)
-      })
+        this._player = new MpegFile(url, {
+          autoplay: this.model.autoplay || false,
+          onload: this.onLoaded.bind(this),
+          ondecodeframe: this.drawDecoded.bind(this)
+        })
+      }
 
       if(this.model.autoplay) {
         this._isPlaying = true;
@@ -206,10 +210,16 @@ export default class WSLiveVideo extends Rect {
   }
 
   reconnect() {
-    if(this._player) {
-      this._player.stop();
+    try{
+      if(this._player) {
+        this._player.stop();
+      }
+    } catch(e) {
+
+    } finally {
+      this._player = null
     }
-    this._player = null
+
   }
 
   onchange(after, before) {

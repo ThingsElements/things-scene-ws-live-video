@@ -769,6 +769,17 @@ export default class MpegDecoder {
     return codeTable[state+2];
   }
 
+  findStartCode( code ) {
+  	var current = 0;
+  	while( true ) {
+  		current = this.buffer.findNextMPEGStartCode();
+  		if( current == code || current == BitReader.NOT_FOUND ) {
+  			return current;
+  		}
+  	}
+  	return BitReader.NOT_FOUND;
+  }
+
   copyBlockToDestination(blockData, destArray, destIndex, scan) {
     for( var n = 0; n < 64; n += 8, destIndex += scan+8 ) {
       destArray[destIndex+0] = blockData[n+0];
@@ -1573,5 +1584,102 @@ export default class MpegDecoder {
       this.currentCb32 = tmpCb32;
     }
 
+  }
+
+  /** getter */
+  static get DECODE_SKIP_OUTPUT() {
+    return DECODE_SKIP_OUTPUT
+  }
+
+  static get PICTURE_RATE() {
+    return PICTURE_RATE
+  }
+
+  static get ZIG_ZAG() {
+    return ZIG_ZAG
+  }
+
+  static get DEFAULT_INTRA_QUANT_MATRIX() {
+    return DEFAULT_INTRA_QUANT_MATRIX
+  }
+
+  static get DEFAULT_NON_INTRA_QUANT_MATRIX() {
+    return DEFAULT_NON_INTRA_QUANT_MATRIX
+  }
+
+  static get PREMULTIPLIER_MATRIX() {
+    return PREMULTIPLIER_MATRIX
+  }
+
+  static get MACROBLOCK_ADDRESS_INCREMENT() {
+    return MACROBLOCK_ADDRESS_INCREMENT
+  }
+
+  static get MACROBLOCK_TYPE_I() {
+    return MACROBLOCK_TYPE_I
+  }
+
+  static get MACROBLOCK_TYPE_P() {
+    return MACROBLOCK_TYPE_P
+  }
+
+  static get MACROBLOCK_TYPE_B() {
+    return MACROBLOCK_TYPE_B
+  }
+
+  static get CODE_BLOCK_PATTERN() {
+    return CODE_BLOCK_PATTERN
+  }
+
+  static get MOTION() {
+    return MOTION
+  }
+
+  static get DCT_DC_SIZE_LUMINANCE() {
+    return DCT_DC_SIZE_LUMINANCE
+  }
+
+  static get DCT_DC_SIZE_CHROMINANCE() {
+    return DCT_DC_SIZE_CHROMINANCE
+  }
+
+  static get DCT_COEFF() {
+    return DCT_COEFF
+  }
+
+  static get PICTURE_TYPE_I() {
+    return PICTURE_TYPE_I
+  }
+
+  static get PICTURE_TYPE_P() {
+    return PICTURE_TYPE_P
+  }
+
+  static get PICTURE_TYPE_B() {
+    return PICTURE_TYPE_B
+  }
+
+  static get START_SEQUENCE() {
+    return START_SEQUENCE
+  }
+
+  static get START_SLICE_FIRST() {
+    return START_SLICE_FIRST
+  }
+
+  static get START_SLICE_LAST() {
+    return START_SLICE_LAST
+  }
+
+  static get START_EXTENSION() {
+    return START_EXTENSION
+  }
+
+  static get START_USER_DATA() {
+    return START_USER_DATA
+  }
+
+  static get MACROBLOCK_TYPE_TABLES() {
+    return MACROBLOCK_TYPE_TABLES
   }
 }
