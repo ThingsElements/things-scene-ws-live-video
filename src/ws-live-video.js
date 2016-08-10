@@ -1,5 +1,8 @@
-import MpegFile from './mpeg-file'
 import MpegWs from './mpeg-ws'
+import GLDriver from './gl-driver'
+
+const WIDTH = 640
+const HEIGHT = 480
 
 var { Component, Rect } = scene
 
@@ -20,22 +23,16 @@ export default class WSLiveVideo extends Rect {
 
     this._ctx = ctx
 
+
     if(!this._player) {
       this._isPlaying = false;
+      this._gl_driver = new GLDriver(WIDTH, HEIGHT)
 
       if(this.model.url && this.model.url.match(/^ws[s]?:\/\//)) {
         this.isLive = true;
 
         this._player = new MpegWs(this.model.url, {
-          ondecodeframe: this.drawDecoded.bind(this)
-        })
-      } else {
-        this.isLive = false;
-        var url = this.app.url ? this.app.url(this.model.url) : this.model.url
-
-        this._player = new MpegFile(url, {
-          autoplay: this.model.autoplay || false,
-          onload: this.onLoaded.bind(this),
+          glDriver : this._gl_driver,
           ondecodeframe: this.drawDecoded.bind(this)
         })
       }
@@ -58,11 +55,11 @@ export default class WSLiveVideo extends Rect {
       }
 
       ctx.drawImage(
-        this._player.canvas,
+        this._gl_driver.canvas,
         0,
         0,
-        this._player.width,
-        this._player.height,
+        this._gl_driver.width,
+        this._gl_driver.height,
         this.model.left,
         this.model.top,
         this.model.width,
@@ -163,8 +160,18 @@ export default class WSLiveVideo extends Rect {
     this.loaded = true;
   }
 
-  drawDecoded(scope, canvas) {
+  drawDecoded(scope, buffer_Y, buffer_Cr, buffer_Cb) {
     if(this._isPlaying) {
+      this.buffer_Y = buffer_Y
+      this.buffer_Cr = buffer_Cr
+      this.buffer_Cb = buffer_Cb
+
+      this._gl_driver.renderFrameGL(
+        this.buffer_Y,
+        this.buffer_Cr,
+        this.buffer_Cb
+      )
+
       this.invalidate();
     }
   }

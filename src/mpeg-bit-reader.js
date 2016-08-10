@@ -80,8 +80,10 @@ export default class BitReader {
   rewind(count) {
     return (this.index -= count);
   }
+
+  static get NOT_FOUND() {
+    return -1
+  }
 }
 
-BitReader.NOT_FOUND = -1
-
-
+// BitReader.NOT_FOUND = -1

@@ -1,5 +1,5 @@
 import MpegWs from './mpeg-ws'
-import GLDriver from './gl-driver'
+import GLDriver4ch from './gl-driver-4ch'
 
 var { Component, Rect } = scene
 
@@ -30,7 +30,7 @@ export default class WS4ChVideo extends Rect {
 
     if(this.model.autoplay) {
       this._isPlaying = true
-      this._gl_driver = new GLDriver(WIDTH, HEIGHT)
+      this._gl_driver = new GLDriver4ch(WIDTH, HEIGHT)
     }
   }
 

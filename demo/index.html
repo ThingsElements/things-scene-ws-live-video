@@ -59,12 +59,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           app.model.components[1].url = './office-ambient.mpg'
         })
 
-        var url = 'http://factory.hatiolab.com/rest/stream/1081'
+        // var url = 'http://192.168.35.225:9013/rest/stream/1081'
+        var url = 'http://factory.hatiolab.com/rest/stream/1757'
 
         app.model = {
           width: 500,
           height: 500,
-          components: [{
+          components: [
+            {
             type: 'ws-live-video',
             top: 0,
             left: 100,
@@ -75,19 +77,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             fontColor: '#FF0000',
             lineWidth: 5,
             autoplay: true,
-            url : 'ws://192.168.35.11:8084/'
-          }, {
-            type: 'ws-live-video',
-            top: 240,
-            left: 100,
-            width: 320,
-            height: 240,
-            fillStyle: '#ffffff',
-            strokeStyle: '#552555',
-            fontColor: '#FF0000',
-            lineWidth: 5,
-            url : url
-          }]
+            url : 'ws://192.168.35.205:8084/'
+          }
+          // {
+          //   type: 'ws-live-video',
+          //   top: 240,
+          //   left: 100,
+          //   width: 320,
+          //   height: 240,
+          //   fillStyle: '#ffffff',
+          //   strokeStyle: '#552555',
+          //   fontColor: '#FF0000',
+          //   lineWidth: 5,
+          //   url : url
+          // }
+        ]
         }
       });
     </script>

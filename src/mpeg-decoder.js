@@ -677,10 +677,11 @@ const
   START_SEQUENCE = 0xB3,
   START_SLICE_FIRST = 0x01,
   START_SLICE_LAST = 0xAF,
+  START_PICTURE = 0x00,
   START_EXTENSION = 0xB5,
-  START_USER_DATA = 0xB2,
+  START_USER_DATA = 0xB2
 
-  MACROBLOCK_TYPE_TABLES = [
+var MACROBLOCK_TYPE_TABLES = [
     null,
     MACROBLOCK_TYPE_I,
     MACROBLOCK_TYPE_P,
@@ -716,6 +717,13 @@ export default class MpegDecoder {
     this.intraQuantMatrix = DEFAULT_INTRA_QUANT_MATRIX;
     this.nonIntraQuantMatrix = DEFAULT_NON_INTRA_QUANT_MATRIX;
 
+    this.intraFrames = [];
+    this.currentFrame = -1;
+    this.currentTime = 0;
+    this.frameCount = 0;
+    this.duration = 0;
+    this.progressiveMinSize = 128 * 1024;
+
     this.mbWidth = (this.width + 15) >> 4;
     this.mbHeight = (this.height + 15) >> 4;
     this.mbSize = this.mbWidth * this.mbHeight;
@@ -725,6 +733,8 @@ export default class MpegDecoder {
     this.codedSize = this.codedWidth * this.codedHeight;
 
     this.halfWidth = this.mbWidth << 3;
+  	this.halfHeight = this.mbHeight << 3;
+  	this.quarterSize = this.codedSize >> 2;
 
     // Manually clamp values when writing macroblocks for shitty browsers
     // that don't support Uint8ClampedArray
@@ -767,17 +777,6 @@ export default class MpegDecoder {
       state = codeTable[state + this.buffer.getBits(1)];
     } while( state >= 0 && codeTable[state] !== 0 );
     return codeTable[state+2];
-  }
-
-  findStartCode( code ) {
-  	var current = 0;
-  	while( true ) {
-  		current = this.buffer.findNextMPEGStartCode();
-  		if( current == code || current == BitReader.NOT_FOUND ) {
-  			return current;
-  		}
-  	}
-  	return BitReader.NOT_FOUND;
   }
 
   copyBlockToDestination(blockData, destArray, destIndex, scan) {
@@ -1661,6 +1660,10 @@ export default class MpegDecoder {
 
   static get START_SEQUENCE() {
     return START_SEQUENCE
+  }
+
+  static get START_PICTURE() {
+    return START_PICTURE
   }
 
   static get START_SLICE_FIRST() {

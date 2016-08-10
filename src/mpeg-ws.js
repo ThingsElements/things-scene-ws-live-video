@@ -33,14 +33,17 @@ export default class MpegWs {
     opts = opts || {};
     // this.progressive = (opts.progressive !== false);
     // this.benchmark = !!opts.benchmark;
-    this.canvas = opts.canvas || document.createElement('canvas');
+    // this.canvas = opts.canvas || document.createElement('canvas');
     // this.autoplay = !!opts.autoplay;
     // this.wantsToPlay = this.autoplay;
     // this.loop = !!opts.loop;
     // this.seekable = !!opts.seekable;
+
+    this.gl_driver = opts.glDriver || null;
+
     this.externalDecodeCallback = opts.ondecodeframe || null;
 
-    // this.renderFrame = this.renderFrameGL;
+    this.renderFrame = this.renderFrameGL;
 
     // this.pictureRate = 30;
     // this.lateTime = 0;
@@ -118,6 +121,9 @@ export default class MpegWs {
     this.sequenceStarted = true;
 
     this.decoder = new MpegDecoder(this.buffer, this.width, this.height)
+
+    // this.gl_driver.canvas.width = this.width;
+    // this.gl_driver.canvas.height = this.height;
 
     // this.canvas.width = this.width;
     // this.canvas.height = this.height;

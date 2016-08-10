@@ -14,9 +14,9 @@ var SHADER_FRAGMENT_YCBCRTORGBA = '\n  precision mediump float;\n\n  uniform sam
 
 var SHADER_VERTEX_IDENTITY = '\n  attribute vec2 vertex;\n  varying vec2 texCoord;\n\n  void main() {\n    texCoord = vertex;\n    gl_Position = vec4((vertex * 2.0 - 1.0) * vec2(1, -1), 0.0, 1.0);\n  }\n';
 
-var GLDriver = function () {
-  function GLDriver(width, height) {
-    _classCallCheck(this, GLDriver);
+var GLDriver4ch = function () {
+  function GLDriver4ch(width, height) {
+    _classCallCheck(this, GLDriver4ch);
 
     this.width = width;
     this.height = height;
@@ -40,7 +40,7 @@ var GLDriver = function () {
     this.initGL();
   }
 
-  _createClass(GLDriver, [{
+  _createClass(GLDriver4ch, [{
     key: 'dispose',
     value: function dispose() {
       this.canvas = null;
@@ -222,12 +222,185 @@ var GLDriver = function () {
     }
   }]);
 
+  return GLDriver4ch;
+}();
+
+exports.default = GLDriver4ch;
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// Shaders for accelerated WebGL YCbCrToRGBA conversion
+var SHADER_FRAGMENT_YCBCRTORGBA = '\n  precision mediump float;\n  uniform sampler2D YTexture;\n  uniform sampler2D CBTexture;\n  uniform sampler2D CRTexture;\n  varying vec2 texCoord;\n\n  void main() {\n    float y = texture2D(YTexture, texCoord).r;\n    float cr = texture2D(CBTexture, texCoord).r - 0.5;\n    float cb = texture2D(CRTexture, texCoord).r - 0.5;\n\n    gl_FragColor = vec4(\n      y + 1.4 * cr,\n      y + -0.343 * cb - 0.711 * cr,\n      y + 1.765 * cb,\n      1.0\n    );\n  }\n';
+
+var SHADER_FRAGMENT_LOADING = '\n  precision mediump float;\n  uniform float loaded;\n  varying vec2 texCoord;\n\n  void main() {\n    float c = ceil(loaded-(1.0-texCoord.y));\n    //float c = ceil(loaded-(1.0-texCoord.y) +sin((texCoord.x+loaded)*16.0)*0.01); // Fancy wave anim\n    gl_FragColor = vec4(c,c,c,1);\n  }\n';
+
+var SHADER_VERTEX_IDENTITY = '\n  attribute vec2 vertex;\n  varying vec2 texCoord;\n\n  void main() {\n    texCoord = vertex;\n    gl_Position = vec4((vertex * 2.0 - 1.0) * vec2(1, -1), 0.0, 1.0);\n  }\n';
+
+var GLDriver = function () {
+  function GLDriver(width, height) {
+    _classCallCheck(this, GLDriver);
+
+    this.width = width;
+    this.height = height;
+
+    this.mbWidth = this.width + 15 >> 4;
+    this.mbHeight = this.height + 15 >> 4;
+    this.codedWidth = this.mbWidth << 4;
+    this.codedHeight = this.mbHeight << 4;
+    this.halfWidth = this.mbWidth << 3;
+    this.halfHeight = this.mbHeight << 3;
+
+    this.canvas = document.createElement('canvas');
+
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+
+    this._rotate_x = 0;
+    this._rotate_y = 0;
+    this._fov = 1.0;
+
+    this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+    if (!this.gl) throw new Error('WebGL not supported');
+
+    this.initGL();
+  }
+
+  _createClass(GLDriver, [{
+    key: 'dispose',
+    value: function dispose() {
+      this.canvas = null;
+      this.gl = null;
+    }
+  }, {
+    key: 'createTexture',
+    value: function createTexture(index, name) {
+      var gl = this.gl;
+      var texture = gl.createTexture();
+
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(gl.getUniformLocation(this.program, name), index);
+
+      return texture;
+    }
+  }, {
+    key: 'compileShader',
+    value: function compileShader(type, source) {
+      var gl = this.gl;
+      var shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shader));
+      }
+
+      return shader;
+    }
+  }, {
+    key: 'renderFrameGL',
+    value: function renderFrameGL(buffer_Y, buffer_Cr, buffer_Cb) {
+      var gl = this.gl;
+
+      // WebGL doesn't like Uint8ClampedArrays, so we have to create a Uint8Array view for
+      // each plane
+      var uint8Y = new Uint8Array(buffer_Y),
+          uint8Cr = new Uint8Array(buffer_Cr),
+          uint8Cb = new Uint8Array(buffer_Cb);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.YTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.codedWidth, this.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uint8Y);
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.CBTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.halfWidth, this.height / 2, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uint8Cr);
+
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.CRTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.halfWidth, this.height / 2, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uint8Cb);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+  }, {
+    key: 'initGL',
+    value: function initGL() {
+      var gl = this.gl;
+
+      // init buffers
+      this.buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), gl.STATIC_DRAW);
+
+      // The main YCbCrToRGBA Shader
+      this.program = gl.createProgram();
+      gl.attachShader(this.program, this.compileShader(gl.VERTEX_SHADER, SHADER_VERTEX_IDENTITY));
+      gl.attachShader(this.program, this.compileShader(gl.FRAGMENT_SHADER, SHADER_FRAGMENT_YCBCRTORGBA));
+      gl.linkProgram(this.program);
+
+      if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(this.program));
+      }
+
+      gl.useProgram(this.program);
+
+      // setup textures
+      this.YTexture = this.createTexture(0, 'YTexture');
+      this.CBTexture = this.createTexture(1, 'CBTexture');
+      this.CRTexture = this.createTexture(2, 'CRTexture');
+
+      var vertexAttr = gl.getAttribLocation(this.program, 'vertex');
+      gl.enableVertexAttribArray(vertexAttr);
+      gl.vertexAttribPointer(vertexAttr, 2, gl.FLOAT, false, 0, 0);
+
+      gl.viewport(0, 0, this.width, this.height);
+
+      return true;
+    }
+  }, {
+    key: 'fov',
+    get: function get() {
+      return this._fov;
+    },
+    set: function set(fov) {
+      this._fov = fov;
+    }
+  }, {
+    key: 'rotateX',
+    get: function get() {
+      return this._rotate_x;
+    },
+    set: function set(rotate_x) {
+      this._rotate_x = rotate_x;
+    }
+  }, {
+    key: 'rotateY',
+    get: function get() {
+      return this._rotate_y;
+    },
+    set: function set(rotate_y) {
+      this._rotate_y = rotate_y;
+    }
+  }]);
+
   return GLDriver;
 }();
 
 exports.default = GLDriver;
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -254,7 +427,7 @@ Object.defineProperty(exports, 'WSWideVideo', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"./ws-4ch-video":7,"./ws-live-video":8}],3:[function(require,module,exports){
+},{"./ws-4ch-video":7,"./ws-live-video":8}],4:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -343,17 +516,22 @@ var BitReader = function () {
     value: function rewind(count) {
       return this.index -= count;
     }
+  }], [{
+    key: "NOT_FOUND",
+    get: function get() {
+      return -1;
+    }
   }]);
 
   return BitReader;
 }();
 
+// BitReader.NOT_FOUND = -1
+
+
 exports.default = BitReader;
 
-
-BitReader.NOT_FOUND = -1;
-
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -988,9 +1166,11 @@ DCT_COEFF = new Int32Array([1 * 3, 2 * 3, 0, //   0
     START_SEQUENCE = 0xB3,
     START_SLICE_FIRST = 0x01,
     START_SLICE_LAST = 0xAF,
+    START_PICTURE = 0x00,
     START_EXTENSION = 0xB5,
-    START_USER_DATA = 0xB2,
-    MACROBLOCK_TYPE_TABLES = [null, MACROBLOCK_TYPE_I, MACROBLOCK_TYPE_P, MACROBLOCK_TYPE_B];
+    START_USER_DATA = 0xB2;
+
+var MACROBLOCK_TYPE_TABLES = [null, MACROBLOCK_TYPE_I, MACROBLOCK_TYPE_P, MACROBLOCK_TYPE_B];
 
 var MpegDecoder = function () {
   function MpegDecoder(buffer, width, height) {
@@ -1023,6 +1203,13 @@ var MpegDecoder = function () {
     this.intraQuantMatrix = DEFAULT_INTRA_QUANT_MATRIX;
     this.nonIntraQuantMatrix = DEFAULT_NON_INTRA_QUANT_MATRIX;
 
+    this.intraFrames = [];
+    this.currentFrame = -1;
+    this.currentTime = 0;
+    this.frameCount = 0;
+    this.duration = 0;
+    this.progressiveMinSize = 128 * 1024;
+
     this.mbWidth = this.width + 15 >> 4;
     this.mbHeight = this.height + 15 >> 4;
     this.mbSize = this.mbWidth * this.mbHeight;
@@ -1032,6 +1219,8 @@ var MpegDecoder = function () {
     this.codedSize = this.codedWidth * this.codedHeight;
 
     this.halfWidth = this.mbWidth << 3;
+    this.halfHeight = this.mbHeight << 3;
+    this.quarterSize = this.codedSize >> 2;
 
     // Manually clamp values when writing macroblocks for shitty browsers
     // that don't support Uint8ClampedArray
@@ -1076,18 +1265,6 @@ var MpegDecoder = function () {
         state = codeTable[state + this.buffer.getBits(1)];
       } while (state >= 0 && codeTable[state] !== 0);
       return codeTable[state + 2];
-    }
-  }, {
-    key: "findStartCode",
-    value: function findStartCode(code) {
-      var current = 0;
-      while (true) {
-        current = this.buffer.findNextMPEGStartCode();
-        if (current == code || current == BitReader.NOT_FOUND) {
-          return current;
-        }
-      }
-      return BitReader.NOT_FOUND;
     }
   }, {
     key: "copyBlockToDestination",
@@ -1982,6 +2159,11 @@ var MpegDecoder = function () {
       return START_SEQUENCE;
     }
   }, {
+    key: "START_PICTURE",
+    get: function get() {
+      return START_PICTURE;
+    }
+  }, {
     key: "START_SLICE_FIRST",
     get: function get() {
       return START_SLICE_FIRST;
@@ -2013,266 +2195,7 @@ var MpegDecoder = function () {
 
 exports.default = MpegDecoder;
 
-},{}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _mpegBitReader = require('./mpeg-bit-reader');
-
-var _mpegBitReader2 = _interopRequireDefault(_mpegBitReader);
-
-var _mpegDecoder = require('./mpeg-decoder');
-
-var _mpegDecoder2 = _interopRequireDefault(_mpegDecoder);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-// import GLDriver from './gl-driver'
-
-var BUFFER_SIZE = 512 * 1024;
-var HEADER = 'jsmp';
-var HJ = HEADER.charCodeAt(0);
-var HS = HEADER.charCodeAt(1);
-var HM = HEADER.charCodeAt(2);
-var HP = HEADER.charCodeAt(3);
-
-var START_PICTURE = 0x00;
-var DECODE_SKIP_OUTPUT = 1;
-
-var requestAnimFrame = function () {
-  return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || function (callback) {
-    window.setTimeout(callback, 1000 / 60);
-  };
-}();
-
-function now() {
-  return window.performance ? window.performance.now() : Date.now();
-}
-
-var MpegFile = function () {
-  function MpegFile(url, opts) {
-    _classCallCheck(this, MpegFile);
-
-    opts = opts || {};
-    this.progressive = opts.progressive !== false;
-    this.benchmark = !!opts.benchmark;
-    this.canvas = opts.canvas || document.createElement('canvas');
-    this.autoplay = !!opts.autoplay;
-    this.wantsToPlay = this.autoplay;
-    this.loop = !!opts.loop;
-    this.seekable = !!opts.seekable;
-    this.externalDecodeCallback = opts.ondecodeframe || null;
-
-    this.renderFrame = this.renderFrameGL;
-
-    this.pictureRate = 30;
-    this.lateTime = 0;
-    this.firstSequenceHeader = 0;
-    this.targetTime = 0;
-
-    this.benchmark = false;
-    this.benchFrame = 0;
-    this.benchDecodeTimes = 0;
-    this.benchAvgFrameTime = 0;
-
-    this.canvasContext = this.canvas.getContext('2d');
-
-    this.load(url);
-  }
-
-  _createClass(MpegFile, [{
-    key: 'load',
-    value: function load(url) {
-
-      this.url = url;
-
-      var request = new XMLHttpRequest();
-      var that = this;
-      request.onreadystatechange = function () {
-        if (request.readyState == request.DONE && request.status == 200) {
-          that.loadCallback(request.response);
-        }
-      };
-      // request.onprogress = this.updateLoader.bind(this);
-
-      request.open('GET', url);
-      request.withCredentials = true;
-      request.responseType = "arraybuffer";
-      request.send();
-    }
-  }, {
-    key: 'loadCallback',
-    value: function loadCallback(file) {
-
-      var time = Date.now();
-      this.buffer = new _mpegBitReader2.default(file);
-      this.decoder = new _mpegDecoder2.default(this.buffer, this.width, this.height);
-
-      this.decoder.findStartCode(_mpegDecoder2.default.START_SEQUENCE);
-      this.firstSequenceHeader = this.buffer.index;
-      this.decodeSequenceHeader();
-
-      // Load the first frame
-      this.nextFrame();
-
-      if (this.autoplay) {
-        this.play();
-      }
-
-      if (this.externalLoadCallback) {
-        this.externalLoadCallback(this);
-      }
-    }
-  }, {
-    key: 'decodeSequenceHeader',
-    value: function decodeSequenceHeader() {
-      this.width = this.buffer.getBits(12);
-      this.height = this.buffer.getBits(12);
-      this.buffer.advance(4); // skip pixel aspect ratio
-      this.pictureRate = _mpegDecoder2.default.PICTURE_RATE[this.buffer.getBits(4)];
-      this.buffer.advance(18 + 1 + 10 + 1); // skip bitRate, marker, bufferSize and constrained bit
-
-      this.initBuffers();
-
-      if (this.buffer.getBits(1)) {
-        // load custom intra quant matrix?
-        for (var i = 0; i < 64; i++) {
-          this.customIntraQuantMatrix[ZIG_ZAG[i]] = this.buffer.getBits(8);
-        }
-        this.intraQuantMatrix = this.customIntraQuantMatrix;
-      }
-
-      if (this.buffer.getBits(1)) {
-        // load custom non intra quant matrix?
-        for (var i = 0; i < 64; i++) {
-          this.customNonIntraQuantMatrix[ZIG_ZAG[i]] = this.buffer.getBits(8);
-        }
-        this.nonIntraQuantMatrix = this.customNonIntraQuantMatrix;
-      }
-    }
-  }, {
-    key: 'initBuffers',
-    value: function initBuffers() {
-      this.intraQuantMatrix = _mpegDecoder2.default.DEFAULT_INTRA_QUANT_MATRIX;
-      this.nonIntraQuantMatrix = _mpegDecoder2.default.DEFAULT_NON_INTRA_QUANT_MATRIX;
-
-      this.mbWidth = this.width + 15 >> 4;
-      this.mbHeight = this.height + 15 >> 4;
-      this.mbSize = this.mbWidth * this.mbHeight;
-
-      this.codedWidth = this.mbWidth << 4;
-      this.codedHeight = this.mbHeight << 4;
-      this.codedSize = this.codedWidth * this.codedHeight;
-
-      this.halfWidth = this.mbWidth << 3;
-      this.halfHeight = this.mbHeight << 3;
-      this.quarterSize = this.codedSize >> 2;
-
-      // Sequence already started? Don't allocate buffers again
-      if (this.sequenceStarted) {
-        return;
-      }
-      this.sequenceStarted = true;
-
-      // Manually clamp values when writing macroblocks for shitty browsers
-      // that don't support Uint8ClampedArray
-      var MaybeClampedUint8Array = window.Uint8ClampedArray || window.Uint8Array;
-      if (!window.Uint8ClampedArray) {
-        this.copyBlockToDestination = this.copyBlockToDestinationClamp;
-        this.addBlockToDestination = this.addBlockToDestinationClamp;
-      }
-
-      // Allocated buffers and resize the canvas
-      this.currentY = new MaybeClampedUint8Array(this.codedSize);
-      this.currentY32 = new Uint32Array(this.currentY.buffer);
-
-      this.currentCr = new MaybeClampedUint8Array(this.codedSize >> 2);
-      this.currentCr32 = new Uint32Array(this.currentCr.buffer);
-
-      this.currentCb = new MaybeClampedUint8Array(this.codedSize >> 2);
-      this.currentCb32 = new Uint32Array(this.currentCb.buffer);
-
-      this.forwardY = new MaybeClampedUint8Array(this.codedSize);
-      this.forwardY32 = new Uint32Array(this.forwardY.buffer);
-
-      this.forwardCr = new MaybeClampedUint8Array(this.codedSize >> 2);
-      this.forwardCr32 = new Uint32Array(this.forwardCr.buffer);
-
-      this.forwardCb = new MaybeClampedUint8Array(this.codedSize >> 2);
-      this.forwardCb32 = new Uint32Array(this.forwardCb.buffer);
-
-      this.canvas.width = this.width;
-      this.canvas.height = this.height;
-
-      this.currentRGBA = this.canvasContext.getImageData(0, 0, this.width, this.height);
-
-      if (this.bwFilter) {
-        // This fails in IE10; don't use the bwFilter if you need to support it.
-        this.currentRGBA32 = new Uint32Array(this.currentRGBA.data.buffer);
-      }
-      this.decoder.fillArray(this.currentRGBA.data, 255);
-    }
-  }, {
-    key: 'nextFrame',
-    value: function nextFrame() {
-      if (!this.buffer) {
-        return;
-      }
-      while (true) {
-        var code = this.buffer.findNextMPEGStartCode();
-
-        if (code == _mpegDecoder2.default.START_SEQUENCE) {
-          this.decodeSequenceHeader();
-        } else if (code == _mpegDecoder2.default.START_PICTURE) {
-          if (this.playing) {
-            this.scheduleNextFrame();
-          }
-          this.decodePicture();
-          return this.canvas;
-        } else if (code == _mpegBitReader2.default.NOT_FOUND) {
-          this.stop(); // Jump back to the beginning
-
-          if (this.externalFinishedCallback) {
-            this.externalFinishedCallback(this);
-          }
-
-          // Only loop if we found a sequence header
-          if (this.loop && this.sequenceStarted) {
-            this.play();
-          }
-          return null;
-        } else {
-          // ignore (GROUP, USER_DATA, EXTENSION, SLICES...)
-        }
-      }
-    }
-  }, {
-    key: 'stop',
-    value: function stop(file) {
-      if (this.buffer) {
-        this.buffer.index = this.firstSequenceHeader;
-      }
-      this.playing = false;
-      if (this.client) {
-        this.client.close();
-        this.client = null;
-      }
-    }
-  }]);
-
-  return MpegFile;
-}();
-
-exports.default = MpegFile;
-
-},{"./mpeg-bit-reader":3,"./mpeg-decoder":4}],6:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2322,14 +2245,17 @@ var MpegWs = function () {
     opts = opts || {};
     // this.progressive = (opts.progressive !== false);
     // this.benchmark = !!opts.benchmark;
-    this.canvas = opts.canvas || document.createElement('canvas');
+    // this.canvas = opts.canvas || document.createElement('canvas');
     // this.autoplay = !!opts.autoplay;
     // this.wantsToPlay = this.autoplay;
     // this.loop = !!opts.loop;
     // this.seekable = !!opts.seekable;
+
+    this.gl_driver = opts.glDriver || null;
+
     this.externalDecodeCallback = opts.ondecodeframe || null;
 
-    // this.renderFrame = this.renderFrameGL;
+    this.renderFrame = this.renderFrameGL;
 
     // this.pictureRate = 30;
     // this.lateTime = 0;
@@ -2416,6 +2342,9 @@ var MpegWs = function () {
       this.sequenceStarted = true;
 
       this.decoder = new _mpegDecoder2.default(this.buffer, this.width, this.height);
+
+      // this.gl_driver.canvas.width = this.width;
+      // this.gl_driver.canvas.height = this.height;
 
       // this.canvas.width = this.width;
       // this.canvas.height = this.height;
@@ -2506,7 +2435,7 @@ var MpegWs = function () {
 
 exports.default = MpegWs;
 
-},{"./mpeg-bit-reader":3,"./mpeg-decoder":4}],7:[function(require,module,exports){
+},{"./mpeg-bit-reader":4,"./mpeg-decoder":5}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2521,9 +2450,9 @@ var _mpegWs = require('./mpeg-ws');
 
 var _mpegWs2 = _interopRequireDefault(_mpegWs);
 
-var _glDriver = require('./gl-driver');
+var _glDriver4ch = require('./gl-driver-4ch');
 
-var _glDriver2 = _interopRequireDefault(_glDriver);
+var _glDriver4ch2 = _interopRequireDefault(_glDriver4ch);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2565,7 +2494,7 @@ var WS4ChVideo = function (_Rect) {
 
     if (_this.model.autoplay) {
       _this._isPlaying = true;
-      _this._gl_driver = new _glDriver2.default(WIDTH, HEIGHT);
+      _this._gl_driver = new _glDriver4ch2.default(WIDTH, HEIGHT);
     }
     return _this;
   }
@@ -2878,7 +2807,7 @@ exports.default = WS4ChVideo;
 
 Component.register('ws-4ch-video', WS4ChVideo);
 
-},{"./gl-driver":1,"./mpeg-ws":6}],8:[function(require,module,exports){
+},{"./gl-driver-4ch":1,"./mpeg-ws":6}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2889,13 +2818,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _mpegFile = require('./mpeg-file');
-
-var _mpegFile2 = _interopRequireDefault(_mpegFile);
-
 var _mpegWs = require('./mpeg-ws');
 
 var _mpegWs2 = _interopRequireDefault(_mpegWs);
+
+var _glDriver = require('./gl-driver');
+
+var _glDriver2 = _interopRequireDefault(_glDriver);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2904,6 +2833,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var WIDTH = 640;
+var HEIGHT = 480;
 
 var _scene = scene;
 var Component = _scene.Component;
@@ -2935,20 +2867,13 @@ var WSLiveVideo = function (_Rect) {
 
       if (!this._player) {
         this._isPlaying = false;
+        this._gl_driver = new _glDriver2.default(WIDTH, HEIGHT);
 
         if (this.model.url && this.model.url.match(/^ws[s]?:\/\//)) {
           this.isLive = true;
 
           this._player = new _mpegWs2.default(this.model.url, {
-            ondecodeframe: this.drawDecoded.bind(this)
-          });
-        } else {
-          this.isLive = false;
-          var url = this.app.url ? this.app.url(this.model.url) : this.model.url;
-
-          this._player = new _mpegFile2.default(url, {
-            autoplay: this.model.autoplay || false,
-            onload: this.onLoaded.bind(this),
+            glDriver: this._gl_driver,
             ondecodeframe: this.drawDecoded.bind(this)
           });
         }
@@ -2975,7 +2900,7 @@ var WSLiveVideo = function (_Rect) {
           this.drawRoundedImage(ctx);
         }
 
-        ctx.drawImage(this._player.canvas, 0, 0, this._player.width, this._player.height, this.model.left, this.model.top, this.model.width, this.model.height);
+        ctx.drawImage(this._gl_driver.canvas, 0, 0, this._gl_driver.width, this._gl_driver.height, this.model.left, this.model.top, this.model.width, this.model.height);
 
         if (this._isHover) {
           this.drawStopButton(ctx);
@@ -3063,8 +2988,14 @@ var WSLiveVideo = function (_Rect) {
     }
   }, {
     key: 'drawDecoded',
-    value: function drawDecoded(scope, canvas) {
+    value: function drawDecoded(scope, buffer_Y, buffer_Cr, buffer_Cb) {
       if (this._isPlaying) {
+        this.buffer_Y = buffer_Y;
+        this.buffer_Cr = buffer_Cr;
+        this.buffer_Cb = buffer_Cb;
+
+        this._gl_driver.renderFrameGL(this.buffer_Y, this.buffer_Cr, this.buffer_Cb);
+
         this.invalidate();
       }
     }
@@ -3181,4 +3112,4 @@ exports.default = WSLiveVideo;
 
 Component.register('ws-live-video', WSLiveVideo);
 
-},{"./mpeg-file":5,"./mpeg-ws":6}]},{},[1,2,3,4,5,6,7,8]);
+},{"./gl-driver":2,"./mpeg-ws":6}]},{},[3]);
