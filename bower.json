@@ -1,6 +1,6 @@
 {
   "name": "things-scene-ws-live-video",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "authors": [
     "Hatio Lab. <heartyoh@hatiolab.com>"
   ],
@@ -19,7 +19,7 @@
   ],
   "dependencies": {
     "polymer": "Polymer/polymer#^1.2.0",
-    "things-scene": "^0.6.0",
+    "things-scene": "^0.7.0",
     "jsmpeg" : "phoboslab/jsmpeg"
   },
   "devDependencies": {
