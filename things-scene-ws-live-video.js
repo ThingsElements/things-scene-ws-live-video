@@ -2028,6 +2028,7 @@ var MpegDecoder = function () {
       // // Record this frame, if the recorder wants it
       // this.recordFrameFromCurrentBuffer();
 
+
       // if( skipOutput !== DECODE_SKIP_OUTPUT ) {
       //   this.renderFrame();
 
