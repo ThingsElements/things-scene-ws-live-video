@@ -4,6 +4,23 @@ import GLDriver from './gl-driver'
 const WIDTH = 640
 const HEIGHT = 480
 
+const NATURE = {
+  mutable: false,
+  resizable: true,
+  rotatable: true,
+  properties : [{
+    type: 'string',
+    label: 'url',
+    name: 'url',
+    property: 'url'
+  }, {
+    type: 'checkbox',
+    label: 'autoplay',
+    name: 'autoplay',
+    property: 'autoplay'
+  }]
+}
+
 var { Component, Rect } = scene
 
 function roundSet(round, width, height){
@@ -18,6 +35,10 @@ function roundSet(round, width, height){
 }
 
 export default class WSLiveVideo extends Rect {
+
+  get nature() {
+    return NATURE
+  }
 
   _draw(ctx) {
 
