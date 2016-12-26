@@ -61,6 +61,10 @@ export default class WSLiveVideo extends Rect {
     return NATURE
   }
 
+  get isTextEdit() {
+    return false
+  }
+
   _post_draw(ctx) {
     var { left, top, width, height, round } = this.model
     this._ctx = ctx
