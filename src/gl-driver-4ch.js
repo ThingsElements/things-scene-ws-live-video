@@ -1,4 +1,7 @@
-// Shaders for accelerated WebGL YCbCrToRGBA conversion
+/*
+ * Copyright © HatioLab Inc. All rights reserved.
+ */
+ // Shaders for accelerated WebGL YCbCrToRGBA conversion
 const SHADER_FRAGMENT_YCBCRTORGBA = `
   precision mediump float;
 

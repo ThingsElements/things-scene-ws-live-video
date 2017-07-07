@@ -1,3 +1,6 @@
+/*
+ * Copyright © HatioLab Inc. All rights reserved.
+ */
 import MpegWs from './mpeg-ws'
 import GLDriver from './gl-driver'
 

@@ -1,3 +1,6 @@
+/*
+ * Copyright © HatioLab Inc. All rights reserved.
+ */
 // ----------------------------------------------------------------------------
 // VLC Tables and Constants
 

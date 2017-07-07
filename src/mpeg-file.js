@@ -1,3 +1,6 @@
+/*
+ * Copyright © HatioLab Inc. All rights reserved.
+ */
 import BitReader from './mpeg-bit-reader'
 import MpegDecoder from './mpeg-decoder'
 // import GLDriver from './gl-driver'
